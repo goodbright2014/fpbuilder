@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+    <mapper namespace="com.skt.ehs.mbs.fpbuilder.database.ReadInputDAO">
+
+
+        <select id="selCampus" resultType="integer">
+            select campus_id
+            from campus
+        </select>
+
+        <select id="selCampName" parameterType="int" resultType="String">
+            select campus_name
+            from campus
+            where campus_id = #{campus_id}
+        </select>
+
+    <select id="selBuilding" parameterType="int" resultType="int">
+        select building_id
+        from building
+        where campus_id = #{campus_id}
+    </select>
+
+    <select id="selBuildingName" parameterType="int" resultType="String">
+        select building_name
+        from building
+        where building_id = #{building_id}
+    </select>
+
+
+    <select id="selFloor" parameterType="int" resultType="int">
+        select floor_id
+        from floor
+        where building_id = #{building_id}
+    </select>
+
+    <select id="selFloorName" parameterType="int" resultType="String">
+        select floor_name
+        from floor
+        where floor_id = #{floor_id}
+    </select>
+
+</mapper>

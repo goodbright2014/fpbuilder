@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.skt.ehs.mbs.fpbuilder.database.FpBuilderDAO">
+
+    <!-- For BLEFpBuilder -->
+
+
+    <select id="selectNDirinCoordiwDir" parameterType="map" resultType="Integer">
+        SELECT
+        a.N_DIR
+        FROM
+        ( SELECT DISTINCT TAG_ID, COLLECTED_TIME, SEQUENCE_NUM
+        FROM raw_data_tag
+        WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+        AND POSITION_X &gt; #{ble_cell_coordi_x1} and POSITION_X &lt; #{ble_cell_coordi_x2}
+        AND POSITION_Y &gt; #{ble_cell_coordi_y1} and POSITION_Y &lt; #{ble_cell_coordi_y2}
+        AND RSSI_DIR &gt; #{lower_rssi_dir} and RSSI_DIR &lt; #{upper_rssi_dir}
+
+        ) t
+        INNER JOIN raw_data_ap AS a
+        ON t.tag_id = a.tag_id
+        AND t.collected_time = a.collected_time
+        AND t.sequence_num = a.sequence_num
+    </select>
+
+
+    <select id="selectNDirinCoordi" parameterType="map" resultType="_magnetic_direction">
+        SELECT
+         NORTH_DIR, RSSI_DIR
+        FROM raw_data_tag
+        WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+        AND POSITION_X &gt; #{ble_cell_coordi_x1} and POSITION_X &lt; #{ble_cell_coordi_x2}
+        AND POSITION_Y &gt; #{ble_cell_coordi_y1} and POSITION_Y &lt; #{ble_cell_coordi_y2}
+        AND REVISION_COLLECT=0
+
+
+    </select>
+
+
+    <select id="selectMagDatainCoordi" parameterType="map" resultType="_magnetic_direction">
+       SELECT NORTH_DIR, RSSI_DIR
+       FROM raw_data_tag
+       WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+       AND POSITION_X &gt; #{ble_cell_coordi_x1} and POSITION_X &lt; #{ble_cell_coordi_x2}
+       AND POSITION_Y &gt; #{ble_cell_coordi_y1} and POSITION_Y &lt; #{ble_cell_coordi_y2}
+       AND REVISION_COLLECT=0
+    </select>
+
+    <select id="selectAPinCoordi" parameterType="map" resultType="_ble_indicator">
+        SELECT
+        a.AP_ID, a.RSSI, t.RSSI_DIR
+        FROM
+        ( SELECT DISTINCT TAG_ID, COLLECTED_TIME, SEQUENCE_NUM, RSSI_DIR
+              FROM raw_data_tag
+              WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+              AND POSITION_X &gt; #{ble_cell_coordi_x1} and POSITION_X &lt; #{ble_cell_coordi_x2}
+              AND POSITION_Y &gt; #{ble_cell_coordi_y1} and POSITION_Y &lt; #{ble_cell_coordi_y2}
+              AND REVISION_COLLECT=0
+        ) t
+        INNER JOIN raw_data_ap AS a
+        ON t.tag_id = a.tag_id
+        AND t.collected_time = a.collected_time
+        AND t.sequence_num = a.sequence_num
+    </select>
+
+
+    <select id="selectAPinCoordiwDir" parameterType="map" resultType="_ble_indicator">
+        SELECT
+        a.AP_ID, a.RSSI
+        FROM
+        ( SELECT TAG_ID, COLLECTED_TIME, SEQUENCE_NUM
+              FROM raw_data_tag
+              WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+              AND POSITION_X &gt; #{ble_cell_coordi_x1} and POSITION_X &lt; #{ble_cell_coordi_x2}
+              AND POSITION_Y &gt; #{ble_cell_coordi_y1} and POSITION_Y &lt; #{ble_cell_coordi_y2}
+              AND RSSI_DIR &gt; #{lower_rssi_dir} and RSSI_DIR &lt; #{upper_rssi_dir}
+
+        ) t
+        INNER JOIN raw_data_ap AS a
+        ON t.tag_id = a.tag_id
+        AND t.collected_time = a.collected_time
+        AND t.sequence_num = a.sequence_num
+    </select>
+
+    <insert id="listInsertFPBLEData" parameterType="java.util.Map">
+        INSERT INTO fp_ble_data (floor_id,building_id,campus_id,ble_cell_id,rssi_dir,ap_id,rssi_avg,rssi_std_dev,rssi_collect_cnt,rssi_min,rssi_max)
+        VALUES <foreach collection="fp_cell_per_ap" item="fp_item" separator=",">
+        ( #{fp_item.floor_id}, #{fp_item.building_id}, #{fp_item.campus_id}, #{fp_item.ble_cell_id}, #{fp_item.rssi_dir}, #{fp_item.ap_id},
+        #{fp_item.rssi_avg},#{fp_item.rssi_std_dev},#{fp_item.rssi_collect_cnt},#{fp_item.rssi_min},#{fp_item.rssi_max})
+    </foreach>
+    </insert>
+
+    <delete id="deleteFpBleData" parameterType="int">
+        delete from fp_ble_data
+        where ble_cell_id = #{ble_cell_id}
+    </delete>
+
+    <!--  For MagFpBuilder -->
+
+    <select id="getMapScale" parameterType="map" resultType="double">
+        select scale_pixel
+        from map_image
+        where campus_id=#{campus_id} and BUILDING_ID = #{building_id} and floor_id=#{floor_id}
+    </select>
+
+    <select id="selRawData" parameterType="map" resultType="RawdataMagnetic">
+        SELECT
+        tag_id,collected_time,sequence_num,sub_seq_num,package_collect_key,revision_collect,position_x,position_y,
+        mag_bh,mag_bv,rssi_dir,north_dir,floor_id,building_id,campus_id,c_cell_id
+        FROM raw_data_tag
+        WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id} and package_collect_key=#{package_collect_key}
+        AND REVISION_COLLECT=0
+
+    </select>
+
+    <select id="selPackageKey" parameterType="map" resultType="String">
+        SELECT DISTINCT package_collect_key
+        FROM raw_data_tag
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+
+    </select>
+
+    <select id="selectMagVH" parameterType="map" resultType="_mag_quantity">
+        SELECT mag_bh, mag_bv
+        FROM raw_data_tag
+        WHERE CAMPUS_ID=#{campus_id}
+        AND BUILDING_ID=#{building_id}
+        AND FLOOR_ID=#{floor_id}
+        AND POSITION_X &gt; #{coord_x1} and POSITION_X &lt; #{coord_x2}
+        AND POSITION_Y &gt; #{coord_y1} and POSITION_Y &lt; #{coord_y2}
+        AND REVISION_COLLECT=0
+    </select>
+
+    <select id="selectRawData" parameterType="map" resultType="RawdataMagnetic">
+        SELECT
+        tag_id,collected_time,sequence_num,sub_seq_num,package_collect_key,revision_collect,position_x,position_y,
+        mag_bh,mag_bv,rssi_dir,north_dir,floor_id,building_id,campus_id,c_cell_id
+        FROM raw_data_tag
+        WHERE CAMPUS_ID=#{campus_id}
+        AND BUILDING_ID=#{building_id}
+        AND FLOOR_ID=#{floor_id}
+        AND POSITION_X &gt; #{coord_x1} and POSITION_X &lt; #{coord_x2}
+        AND POSITION_Y &gt; #{coord_y1} and POSITION_Y &lt; #{coord_y2}
+        AND REVISION_COLLECT=0
+    </select>
+
+    <insert id="insert_fp_mag_data" parameterType="CellStatistics" >
+        INSERT INTO fp_mag_data (floor_id, building_id, campus_id, mag_cell_id, ble_cell_id, position_x, position_y,
+                                   bh_avg, bh_std_dev, bh_min, bh_max, bh_median,
+                                   bv_avg, bv_std_dev, bv_min, bv_max, bv_median, collect_cnt, cell_size)
+        values(#{floor_id},#{building_id},#{campus_id},#{mag_cell_id},#{ble_cell_id},#{position_x},#{position_y},
+                                  #{bh_avg},#{bh_std_dev},#{bh_min},#{bh_max},#{bh_median},
+                                   #{bv_avg},#{bv_std_dev},#{bv_min},#{bv_max},#{bv_median},#{collect_cnt},#{cell_size})
+    </insert>
+
+
+    <delete id="delete_fp_mag_data" parameterType="int">
+             delete from fp_mag_data
+             where mag_cell_id = #{mag_cell_id}
+    </delete>
+
+
+    <select id="selCampus" resultType="integer">
+        select campus_id
+        from campus
+    </select>
+
+    <select id="selCampName" parameterType="int" resultType="String">
+        select campus_name
+        from campus
+        where campus_id = #{campus_id}
+    </select>
+
+
+    <select id="selectMapX" parameterType="map" resultType="int">
+        SELECT mag_img_width
+        FROM map_image
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </select>
+
+    <select id="selectMapY" parameterType="map" resultType="int">
+        SELECT mag_img_height
+        FROM map_image
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </select>
+
+    <select id="selectMapScale" parameterType="map" resultType="double">
+        SELECT scale_pixel
+        FROM map_image
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </select>
+
+
+    <delete id="delRawDataBLE" parameterType="map">
+        delete from raw_data_ap
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <delete id="delRawDataTag" parameterType="map">
+        delete from raw_data_tag
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <delete id="delFpBleData" parameterType="map">
+        delete from fp_ble_data
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+
+    <delete id="delFpBleCell" parameterType="map">
+        delete from fp_ble_cell
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <delete id="delFpBleFloor" parameterType="map">
+        delete from fp_ble_floor_math
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <delete id="delFpMagData" parameterType="map">
+        delete from fp_mag_data
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <delete id="delFpMagCluster" parameterType="map">
+        delete from fp_mag_cluster
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </delete>
+
+    <insert id="insertPattern" parameterType="java.util.List">
+        INSERT INTO fp_mag_cluster
+
+        ( floor_id, building_id, campus_id, cluster_id, seqnum, mag_cell_id, bh, bv )
+        VALUES <foreach collection="collection" item="item"  index="index" separator=",">
+        ( #{item.floor_id},#{item.building_id},#{item.campus_id},
+        #{item.cluster_id},#{item.seqnum},
+        #{item.mag_cell_id},#{item.bh},#{item.bv}
+        )
+    </foreach>
+    </insert>
+
+    <insert id="insertMagStat" parameterType="java.util.List">
+        INSERT INTO fp_mag_data (floor_id, building_id, campus_id, mag_cell_id, ble_cell_id, position_x, position_y,
+        bh_avg, bh_std_dev, bh_min, bh_max, bh_median,
+        bv_avg, bv_std_dev, bv_min, bv_max, bv_median, collect_cnt, cell_size, ndir_norm_factor)
+        VALUES <foreach collection="collection" item="item"  index="index" separator=",">
+        ( #{item.floor_id},#{item.building_id},#{item.campus_id},
+        #{item.mag_cell_id},#{item.ble_cell_id},#{item.position_x},#{item.position_y},
+        #{item.bh_avg},#{item.bh_std_dev},#{item.bh_min},#{item.bh_max},#{item.bh_median},
+        #{item.bv_avg},#{item.bv_std_dev},#{item.bv_min},#{item.bv_max},#{item.bv_median},
+        #{item.collect_cnt},#{item.cell_size},#{item.ndir_norm_factor}
+        )
+    </foreach>
+    </insert>
+
+
+
+
+    <insert id="listInsertBLEFpCell"  parameterType="java.util.List">
+        INSERT INTO fp_ble_cell
+
+        ( campus_id , building_id, floor_id, ble_cell_id, rssi_dir, position_x, position_y, cell_size, collect_cnt, n_dir_avg, n_dir_stddev )
+        VALUES <foreach collection="collection" item="item"  index="index" separator=",">
+        ( #{item.campus_id} , #{item.building_id}, #{item.floor_id} ,#{item.ble_cell_id},#{item.rssi_dir},
+        #{item.position_x},#{item.position_y},#{item.cell_size},#{item.collect_cnt},#{item.n_dir_avg},#{item.n_dir_stddev}
+        )
+        </foreach>
+    </insert>
+
+    <insert id="insertBLEFpFloor" parameterType="java.util.Map">
+        INSERT INTO fp_ble_floor_math
+        ( floor_id, building_id, campus_id,
+        rssi_avg, rssi_std_dev, rssi_collect_cnt, ap_id
+        )
+        VALUES <foreach collection="bleFpFloor" item="item" separator=",">
+        ( #{item.floor_id},#{item.building_id},#{item.campus_id},#{item.rssi_avg},#{item.rssi_std_dev},
+        #{item.rssi_collect_cnt},#{item.ap_id}
+        )
+    </foreach>
+    </insert>
+
+    <select id="selAP_ID" parameterType="map" resultType="String">
+        SELECT distinct(AP_ID)
+        FROM raw_data_ap
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+    </select>
+
+
+    <select id="selRSSI" parameterType="map" resultType="int">
+        SELECT
+        rssi
+        FROM raw_data_ap
+        WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id} and ap_id=#{ap_id}
+    </select>
+
+
+    <select id="selMagCellID" parameterType="map" resultType="int">
+        SELECT
+        MAG_CELL_ID
+        FROM fp_mag_data
+        WHERE campus_id=#{campus_id} and building_id=#{building_id} and floor_id=#{floor_id}
+    </select>
+
+
+    <update id="updateMDirCount" parameterType="map">
+        update fp_mag_data
+        set MDIR_COUNT=#{mDirFactor}
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+        and MAG_CELL_ID=#{cellid}
+    </update>
+
+
+    <select id="bh_07F5"  resultType="double">
+        select MAG_BH FROM raw_data_tag where  PACKAGE_COLLECT_KEY='97f5b8af483949e49cddbc39900ae6ed' and  TAG_ID='000734AD07F5'
+    </select>
+
+    <select id="sql_dn07f5v"  resultType="double">
+        select MAG_BV FROM raw_data_tag where  PACKAGE_COLLECT_KEY='97f5b8af483949e49cddbc39900ae6ed' and  TAG_ID='000734AD07F5'
+    </select>
+
+    <select id="bh_202f"  resultType="double">
+        select MAG_BH FROM raw_data_tag where  PACKAGE_COLLECT_KEY='97f5b8af483949e49cddbc39900ae6ed' and  TAG_ID='000744CB202F'
+    </select>
+
+    <select id="sql_dn202fv"  resultType="double">
+        select MAG_BV FROM raw_data_tag where  PACKAGE_COLLECT_KEY='97f5b8af483949e49cddbc39900ae6ed' and  TAG_ID='000744CB202F'
+    </select>
+
+    <select id="query1702150115"  resultType="String">
+    select C_CELL_ID FROM raw_data_tag
+    where PACKAGE_COLLECT_KEY='bc9e1d8a7fc24316b4293f06a7084487'
+    and REVISION_COLLECT=0
+    </select>
+
+    <select id="query1702150135"  resultType="CellStatistics">
+        SELECT  floor_id, building_id, campus_id, mag_cell_id, ble_cell_id, position_x, position_y,
+        bh_avg, bh_std_dev, bh_min, bh_max, bh_median,
+        bv_avg, bv_std_dev, bv_min, bv_max, bv_median, collect_cnt, cell_size, ndir_norm_factor
+        from fp_mag_data
+        WHERE campus_id=1 and building_id=1 and floor_id=5
+    </select>
+
+    <select id="query1702151552"  resultType="RawdataMagnetic">
+        select tag_id,collected_time,sequence_num,sub_seq_num,package_collect_key,revision_collect,position_x,position_y,
+        mag_bh,mag_bv,rssi_dir,north_dir,floor_id,building_id,campus_id,c_cell_id
+        FROM raw_data_tag
+        where PACKAGE_COLLECT_KEY='43fdcd0d31bc49359d27d6e23bcacc9e'
+        and REVISION_COLLECT=0
+    </select>
+
+
+    <update id="query1702151921" parameterType="map">
+        update raw_data_tag
+        set floor_id=5170209
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+        and PACKAGE_COLLECT_KEY=#{PACKAGE_COLLECT_KEY}
+        and C_CELL_ID=#{C_CELL_ID}
+    </update>
+
+    <update id="query1702151938" parameterType="map">
+        update raw_data_ap
+        set floor_id=5170209
+        WHERE campus_id=#{campus_id}
+        and BUILDING_ID = #{building_id}
+        and floor_id=#{floor_id}
+        and TAG_ID =#{TAG_ID}
+        and SEQUENCE_NUM=#{SEQUENCE_NUM}
+    </update>
+
+
+    <select id="dummySQL"  resultType="double">
+        select BH FROM fp_mag_cluster
+        where CLUSTER_ID=223981465
+    </select>
+
+</mapper>
